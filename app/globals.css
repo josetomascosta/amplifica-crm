@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --amplifica-blue:       #4548FF;
+  --amplifica-yellow:     #F7DC4B;
+  --amplifica-dark-blue:  #121755;
+  --amplifica-dark-gray:  #1D1D1F;
+  --amplifica-light-gray: #E1E0E0;
+  --amplifica-bg:         #F0F2F7;
+  --amplifica-green:      #22c55e;
+  --amplifica-red:        #ef4444;
+  --amplifica-orange:     #f97316;
+  --amplifica-purple:     #8b5cf6;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--amplifica-bg);
+  color: var(--amplifica-dark-gray);
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--amplifica-light-gray);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c5c4c4;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--amplifica-blue) !important;
+  outline: none;
+}

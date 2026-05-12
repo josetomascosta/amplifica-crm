@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const body = await req.json();
   const data: Record<string, unknown> = {};
   if (body.name !== undefined) data.name = body.name;
@@ -11,14 +12,15 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (body.password) data.passwordHash = await bcrypt.hash(body.password, 10);
 
   const user = await prisma.user.update({
-    where: { id: params.id },
+    where: { id },
     data,
     select: { id: true, name: true, email: true, role: true, activo: true, createdAt: true },
   });
   return NextResponse.json(user);
 }
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
-  await prisma.user.update({ where: { id: params.id }, data: { activo: false } });
+export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  await prisma.user.update({ where: { id }, data: { activo: false } });
   return NextResponse.json({ ok: true });
 }

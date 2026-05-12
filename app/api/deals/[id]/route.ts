@@ -4,13 +4,14 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const deal = await prisma.deal.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       propietario: { select: { id: true, name: true, image: true, email: true } },
       contactos: true,
@@ -24,8 +25,9 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -47,7 +49,7 @@ export async function PATCH(
   }
 
   const deal = await prisma.deal.update({
-    where: { id: params.id },
+    where: { id },
     data,
     include: {
       propietario: { select: { id: true, name: true, image: true, email: true } },

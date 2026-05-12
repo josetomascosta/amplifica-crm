@@ -5,8 +5,9 @@ import { PIPELINE_STAGES } from "@/lib/pipeline";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -18,7 +19,7 @@ export async function PATCH(
   }
 
   const deal = await prisma.deal.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       etapa,
       probabilidad: validStage.probability ?? undefined,
@@ -29,7 +30,6 @@ export async function PATCH(
     },
   });
 
-  // Immutable activity log
   await prisma.actividad.create({
     data: {
       tipo: "SISTEMA",

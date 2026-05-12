@@ -9,12 +9,18 @@ const isPostgres = dbUrl.startsWith("postgresql://") || dbUrl.startsWith("postgr
 if (isPostgres) {
   console.log("PostgreSQL detected — rewriting schema for production...");
   let schema = fs.readFileSync(schemaPath, "utf-8");
-  schema = schema
-    .replace(/provider\s*=\s*"sqlite"/, 'provider  = "postgresql"')
-    .replace(
+
+  // Switch provider to postgresql
+  schema = schema.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');
+
+  // Add directUrl only if the env var exists
+  if (process.env.DIRECT_URL) {
+    schema = schema.replace(
       /url\s*=\s*env\("DATABASE_URL"\)/,
       'url       = env("DATABASE_URL")\n  directUrl = env("DIRECT_URL")'
     );
+  }
+
   fs.writeFileSync(schemaPath, schema);
   console.log("Schema updated to PostgreSQL");
 
@@ -23,8 +29,7 @@ if (isPostgres) {
     execSync("npx prisma db push --accept-data-loss", { stdio: "inherit" });
     console.log("Database migrated successfully");
   } catch (e) {
-    console.error("Warning: prisma db push failed — database may need manual setup");
-    console.error(e.message);
+    console.warn("Warning: prisma db push failed — continuing build anyway");
   }
 }
 

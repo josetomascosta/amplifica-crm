@@ -7,9 +7,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const row = await prisma.compromisoSemanal.update({
     where: { id },
     data: {
-      completado: body.completado !== undefined ? Boolean(body.completado) : undefined,
-      resultado: body.resultado !== undefined ? body.resultado : undefined,
-      texto: body.texto !== undefined ? body.texto : undefined,
+      compromisoReuniones: body.compromisoReuniones !== undefined ? Number(body.compromisoReuniones) : undefined,
+      logradoReuniones: body.logradoReuniones !== undefined ? Boolean(body.logradoReuniones) : undefined,
+      compromisoPedidos: body.compromisoPedidos !== undefined ? Number(body.compromisoPedidos) : undefined,
+      logradoPedidos: body.logradoPedidos !== undefined ? Boolean(body.logradoPedidos) : undefined,
     },
   });
   return NextResponse.json(row);

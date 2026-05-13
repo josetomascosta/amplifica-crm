@@ -13,13 +13,22 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const row = await prisma.compromisoSemanal.create({
-    data: {
+  const row = await prisma.compromisoSemanal.upsert({
+    where: { semana_bdNombre: { semana: body.semana, bdNombre: body.bdNombre } },
+    update: {
+      compromisoReuniones: body.compromisoReuniones !== undefined ? Number(body.compromisoReuniones) : undefined,
+      logradoReuniones: body.logradoReuniones !== undefined ? Boolean(body.logradoReuniones) : undefined,
+      compromisoPedidos: body.compromisoPedidos !== undefined ? Number(body.compromisoPedidos) : undefined,
+      logradoPedidos: body.logradoPedidos !== undefined ? Boolean(body.logradoPedidos) : undefined,
+    },
+    create: {
       semana: body.semana,
       bdNombre: body.bdNombre,
-      texto: body.texto,
-      completado: false,
+      compromisoReuniones: Number(body.compromisoReuniones) || 0,
+      logradoReuniones: Boolean(body.logradoReuniones),
+      compromisoPedidos: Number(body.compromisoPedidos) || 0,
+      logradoPedidos: Boolean(body.logradoPedidos),
     },
   });
-  return NextResponse.json(row, { status: 201 });
+  return NextResponse.json(row);
 }

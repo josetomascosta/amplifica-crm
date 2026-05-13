@@ -163,16 +163,15 @@ model MetaMensual {
   @@unique([mes, tipo, assignee])
 }
 
-model ReunionSemanal {
-  id       String @id @default(cuid())
-  semana   String // "2026-W20"
-  bdNombre String
-  cantidad Int    @default(0)
+model Reunion {
+  id         String   @id @default(cuid())
+  fecha      DateTime
+  bdNombre   String
+  dealNombre String?
+  realizada  Boolean  @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@unique([semana, bdNombre])
 }
 
 model CompromisoSemanal {

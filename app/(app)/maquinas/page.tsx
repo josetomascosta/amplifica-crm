@@ -26,7 +26,7 @@ type Deal = {
 
 type MetaMensual = { id: string; mes: string; tipo: string; assignee: string; objetivo: number };
 
-type ReunionSemanal = { id: string; semana: string; bdNombre: string; cantidad: number };
+type Reunion = { id: string; fecha: string; bdNombre: string; dealNombre: string | null; realizada: boolean };
 
 type CompromisoSemanal = {
   id: string;
@@ -271,75 +271,190 @@ function TabCierres({ deals }: { deals: Deal[] }) {
 // ─── Tab: Reuniones ───────────────────────────────────────────────────────────
 
 function TabReuniones({ deals }: { deals: Deal[] }) {
-  const [semana, setSemana] = useState(getSemanaActual());
-  const [reuniones, setReuniones] = useState<ReunionSemanal[]>([]);
-  const [saving, setSaving] = useState<string | null>(null);
-  const semanas = useMemo(() => semanasList(), []);
+  const [reuniones, setReuniones] = useState<Reunion[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [newFecha, setNewFecha] = useState(new Date().toISOString().split("T")[0]);
+  const [newBd, setNewBd] = useState("");
+  const [newDeal, setNewDeal] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [bdFiltro, setBdFiltro] = useState("todos");
 
   const bds = useMemo(() => {
     const names = deals.map((d) => d.businessDeveloper).filter((b): b is string => !!b);
     return [...new Set(names)].sort();
   }, [deals]);
 
+  useEffect(() => { if (bds.length > 0 && !newBd) setNewBd(bds[0]); }, [bds, newBd]);
+
   const fetchReuniones = useCallback(async () => {
-    const res = await fetch(`/api/reuniones?semana=${semana}`);
+    const url = bdFiltro !== "todos" ? `/api/reuniones?bd=${encodeURIComponent(bdFiltro)}` : "/api/reuniones";
+    const res = await fetch(url);
     setReuniones(await res.json());
-  }, [semana]);
+  }, [bdFiltro]);
 
   useEffect(() => { fetchReuniones(); }, [fetchReuniones]);
 
-  function getCantidad(bd: string) {
-    return reuniones.find((r) => r.bdNombre === bd)?.cantidad ?? 0;
-  }
-
-  async function saveCantidad(bd: string, cantidad: number) {
-    setSaving(bd);
+  async function agregar() {
+    if (!newFecha || !newBd) return;
+    setAdding(true);
     await fetch("/api/reuniones", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ semana, bdNombre: bd, cantidad }),
+      body: JSON.stringify({ fecha: newFecha, bdNombre: newBd, dealNombre: newDeal || null }),
     });
-    setSaving(null);
+    setAdding(false);
+    setShowModal(false);
+    setNewDeal("");
     fetchReuniones();
   }
 
-  const totalSemana = reuniones.reduce((s, r) => s + r.cantidad, 0);
+  async function toggleRealizada(id: string, realizada: boolean) {
+    await fetch(`/api/reuniones/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ realizada: !realizada }),
+    });
+    fetchReuniones();
+  }
+
+  async function eliminar(id: string) {
+    await fetch(`/api/reuniones/${id}`, { method: "DELETE" });
+    fetchReuniones();
+  }
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  const pasadas = reuniones.filter((r) => new Date(r.fecha) < hoy);
+  const proximas = reuniones.filter((r) => new Date(r.fecha) >= hoy);
+  const realizadas = pasadas.filter((r) => r.realizada).length;
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, padding: "12px 16px", backgroundColor: "#fff", borderRadius: 10, border: "1px solid #E1E0E0" }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#555" }}>Semana:</span>
-        <select value={semana} onChange={(e) => setSemana(e.target.value)} style={{ padding: "6px 12px", borderRadius: 7, border: "1.5px solid #E1E0E0", fontSize: 13, outline: "none", color: "#333" }}>
-          {semanas.map((s) => <option key={s} value={s}>{semanaLabel(s)}</option>)}
-        </select>
-        <span style={{ marginLeft: "auto", fontSize: 14, fontWeight: 700, color: "#4548FF" }}>
-          {totalSemana} reuniones en total
-        </span>
+      {/* Header con botón */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#555" }}>Ver:</span>
+          <select value={bdFiltro} onChange={(e) => setBdFiltro(e.target.value)} style={{ padding: "6px 12px", borderRadius: 7, border: "1.5px solid #E1E0E0", fontSize: 13, outline: "none", color: "#333" }}>
+            <option value="todos">Todos los BD</option>
+            {bds.map((b) => <option key={b} value={b}>{b}</option>)}
+          </select>
+        </div>
+        {pasadas.length > 0 && (
+          <span style={{ fontSize: 13, color: realizadas === pasadas.length ? "#16a34a" : "#888" }}>
+            {realizadas}/{pasadas.length} pasadas realizadas
+          </span>
+        )}
+        <button
+          onClick={() => setShowModal(true)}
+          style={{ marginLeft: "auto", padding: "9px 20px", borderRadius: 8, backgroundColor: "#4548FF", color: "#fff", border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+        >
+          + Agregar reunión
+        </button>
       </div>
 
-      <div style={{ backgroundColor: "#fff", border: "1px solid #E1E0E0", borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ padding: "14px 20px", borderBottom: "1px solid #F0F2F7", backgroundColor: "#FAFAFA" }}>
-          <h3 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: "#121755", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
-            Reuniones ejecutadas esta semana
-          </h3>
-        </div>
-        {bds.length === 0 ? (
-          <p style={{ padding: "24px", fontSize: 13, color: "#aaa", textAlign: "center" }}>Los BD aparecerán aquí con sus deals en el Pipeline.</p>
-        ) : bds.map((bd) => (
-          <div key={bd} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderBottom: "1px solid #F8F9FC" }}>
-            <div style={{ width: 34, height: 34, borderRadius: "50%", backgroundColor: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#4548FF" }}>
-              {bd.charAt(0).toUpperCase()}
+      {/* Modal agregar */}
+      {showModal && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ backgroundColor: "#fff", borderRadius: 14, padding: "28px 28px 24px", width: 400, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+            <h3 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: "#121755", textTransform: "uppercase", margin: "0 0 20px" }}>
+              Agregar Reunión
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#555", display: "block", marginBottom: 6 }}>Fecha</label>
+                <input type="date" value={newFecha} onChange={(e) => setNewFecha(e.target.value)} style={{ width: "100%", padding: "8px 12px", borderRadius: 7, border: "1.5px solid #E1E0E0", fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#555", display: "block", marginBottom: 6 }}>Business Developer</label>
+                <select value={newBd} onChange={(e) => setNewBd(e.target.value)} style={{ width: "100%", padding: "8px 12px", borderRadius: 7, border: "1.5px solid #E1E0E0", fontSize: 14, outline: "none", color: "#333" }}>
+                  {bds.map((b) => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#555", display: "block", marginBottom: 6 }}>Marca / Seller <span style={{ fontWeight: 400, color: "#aaa" }}>(opcional)</span></label>
+                <input type="text" value={newDeal} onChange={(e) => setNewDeal(e.target.value)} placeholder="Ej: Lumisse, PetMyPet..." style={{ width: "100%", padding: "8px 12px", borderRadius: 7, border: "1.5px solid #E1E0E0", fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+              </div>
             </div>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "#333" }}>{bd}</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button onClick={() => saveCantidad(bd, Math.max(0, getCantidad(bd) - 1))} style={{ width: 30, height: 30, borderRadius: 7, border: "1.5px solid #E1E0E0", backgroundColor: "#fff", cursor: "pointer", fontSize: 18, color: "#555", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-              <span style={{ width: 40, textAlign: "center", fontSize: 18, fontWeight: 700, color: "#121755" }}>{getCantidad(bd)}</span>
-              <button onClick={() => saveCantidad(bd, getCantidad(bd) + 1)} style={{ width: 30, height: 30, borderRadius: 7, border: "1.5px solid #E1E0E0", backgroundColor: "#fff", cursor: "pointer", fontSize: 18, color: "#555", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
-              {saving === bd && <span style={{ fontSize: 11, color: "#4548FF", width: 16 }}>✓</span>}
+            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+              <button onClick={() => setShowModal(false)} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1.5px solid #E1E0E0", backgroundColor: "#fff", color: "#555", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Cancelar</button>
+              <button onClick={agregar} disabled={adding || !newFecha || !newBd} style={{ flex: 2, padding: "10px", borderRadius: 8, backgroundColor: "#4548FF", color: "#fff", border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: adding ? 0.6 : 1 }}>
+                {adding ? "Guardando..." : "Guardar reunión"}
+              </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Próximas reuniones */}
+      {proximas.length > 0 && (
+        <div style={{ backgroundColor: "#fff", border: "1px solid #E1E0E0", borderRadius: 12, overflow: "hidden", marginBottom: 16 }}>
+          <div style={{ padding: "12px 20px", borderBottom: "1px solid #F0F2F7", backgroundColor: "#EEF2FF" }}>
+            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: "#4548FF", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Próximas — {proximas.length}
+            </span>
+          </div>
+          {proximas.map((r) => (
+            <ReunionRow key={r.id} r={r} onToggle={toggleRealizada} onDelete={eliminar} />
+          ))}
+        </div>
+      )}
+
+      {/* Reuniones pasadas */}
+      <div style={{ backgroundColor: "#fff", border: "1px solid #E1E0E0", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ padding: "12px 20px", borderBottom: "1px solid #F0F2F7", backgroundColor: "#FAFAFA" }}>
+          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: "#121755", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            Pasadas — {realizadas}/{pasadas.length} realizadas
+          </span>
+        </div>
+        {pasadas.length === 0 ? (
+          <p style={{ padding: "24px", textAlign: "center", color: "#aaa", fontSize: 13 }}>No hay reuniones pasadas registradas.</p>
+        ) : pasadas.map((r) => (
+          <ReunionRow key={r.id} r={r} onToggle={toggleRealizada} onDelete={eliminar} />
         ))}
       </div>
+
+      {reuniones.length === 0 && (
+        <div style={{ padding: "40px", textAlign: "center", color: "#aaa", fontSize: 14 }}>
+          No hay reuniones registradas. Haz clic en &quot;+ Agregar reunión&quot; para comenzar.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReunionRow({ r, onToggle, onDelete }: { r: Reunion; onToggle: (id: string, realizada: boolean) => void; onDelete: (id: string) => void }) {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const fecha = new Date(r.fecha);
+  const esPasada = fecha < hoy;
+  const fechaLabel = fecha.toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" });
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: "1px solid #F8F9FC" }}>
+      {esPasada ? (
+        <button
+          onClick={() => onToggle(r.id, r.realizada)}
+          title={r.realizada ? "Marcar como no realizada" : "Marcar como realizada"}
+          style={{ width: 24, height: 24, borderRadius: 6, border: `2px solid ${r.realizada ? "#16a34a" : "#E1E0E0"}`, backgroundColor: r.realizada ? "#16a34a" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+        >
+          {r.realizada && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}
+        </button>
+      ) : (
+        <div style={{ width: 24, height: 24, borderRadius: 6, border: "2px solid #4548FF", backgroundColor: "#EEF2FF", flexShrink: 0 }} />
+      )}
+      <div style={{ flex: 1 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: esPasada && !r.realizada ? "#dc2626" : "#333", textDecoration: r.realizada ? "none" : "none" }}>
+          {fechaLabel}
+        </span>
+        {r.dealNombre && <span style={{ fontSize: 12, color: "#888", marginLeft: 8 }}>· {r.dealNombre}</span>}
+        {esPasada && !r.realizada && <span style={{ fontSize: 11, color: "#dc2626", marginLeft: 8, fontWeight: 600 }}>No marcada</span>}
+      </div>
+      <div style={{ width: 28, height: 28, borderRadius: "50%", backgroundColor: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#4548FF" }}>
+        {r.bdNombre.charAt(0).toUpperCase()}
+      </div>
+      <span style={{ fontSize: 12, color: "#888", minWidth: 60 }}>{r.bdNombre.split(" ")[0]}</span>
+      <button onClick={() => onDelete(r.id)} style={{ padding: "3px 8px", borderRadius: 5, border: "1px solid #F0F2F7", backgroundColor: "#fff", color: "#ccc", cursor: "pointer", fontSize: 11 }}>✕</button>
     </div>
   );
 }

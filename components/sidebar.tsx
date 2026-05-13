@@ -10,12 +10,13 @@ type NavItem = { href: string; label: string; icon: React.ComponentType<IconProp
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: IconDashboard },
-  { href: "/pipeline", label: "Pipeline", icon: IconPipeline, roles: ["SALES", "ADMIN", "JEFATURA"] },
-  { href: "/marcas", label: "Marcas", icon: IconMarcas, roles: ["SALES", "ADMIN", "JEFATURA", "ONBOARDING"] },
+  { href: "/pipeline", label: "Pipeline", icon: IconPipeline, roles: ["SALES", "SDR", "ADMIN", "JEFATURA"] },
+  { href: "/marcas", label: "Marcas", icon: IconMarcas, roles: ["SALES", "SDR", "ADMIN", "JEFATURA", "ONBOARDING"] },
   { href: "/importar", label: "Importar", icon: IconImportar, roles: ["SALES", "ADMIN"] },
-  { href: "/reportes", label: "Reportes", icon: IconReportes, roles: ["SALES", "ADMIN", "JEFATURA", "MARKETING"] },
-  { href: "/maquinas", label: "Máquinas 2026", icon: IconMaquinas, roles: ["SALES", "ADMIN", "JEFATURA"] },
-  { href: "/looker", label: "Seguimiento", icon: IconLooker, roles: ["SALES", "ADMIN", "JEFATURA", "MARKETING"] },
+  { href: "/reportes", label: "Reportes", icon: IconReportes, roles: ["SALES", "SDR", "ADMIN", "JEFATURA", "MARKETING"] },
+  { href: "/maquinas", label: "Máquinas 2026", icon: IconMaquinas, roles: ["SALES", "SDR", "ADMIN", "JEFATURA"] },
+  { href: "/looker", label: "Seguimiento", icon: IconLooker, roles: ["SALES", "SDR", "ADMIN", "JEFATURA", "MARKETING"] },
+  { href: "/perfil", label: "Mi Perfil", icon: IconPerfil },
 ];
 
 const ADMIN_ITEMS: NavItem[] = [
@@ -216,6 +217,16 @@ function IconUsuarios({ size }: IconProps) {
       <circle cx="7" cy="7" r="3" stroke="currentColor" strokeWidth="1.5" />
       <path d="M1 17c0-2.761 2.686-5 6-5s6 2.239 6 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       <path d="M14 9a3 3 0 0 0 0-6M17 17c0-2.761-1.343-5-4-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconPerfil({ size, active }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M2 18c0-3.314 3.582-6 8-6s8 2.686 8 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="10" cy="7" r="1.5" fill={active ? "#4548FF" : "currentColor"} />
     </svg>
   );
 }

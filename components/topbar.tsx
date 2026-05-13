@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
 import { getInitials } from "@/lib/utils";
@@ -141,6 +142,25 @@ export function Topbar({ user, title }: TopbarProps) {
                   {user.email}
                 </p>
               </div>
+              <Link
+                href="/perfil"
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "8px 16px",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  color: "#1D1D1F",
+                  fontFamily: "'Inter', sans-serif",
+                  textDecoration: "none",
+                }}
+              >
+                Mi Perfil
+              </Link>
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
                 style={{

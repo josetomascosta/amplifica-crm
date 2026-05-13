@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AmplificaIsotipoSidebar } from "@/components/ui/amplifica-logo";
 
 export default function LoginPage() {
@@ -146,6 +147,19 @@ export default function LoginPage() {
           >
             {loading ? "Ingresando..." : "Ingresar"}
           </button>
+
+          <Link
+            href="/forgot-password"
+            style={{
+              textAlign: "center",
+              fontSize: 12,
+              color: "rgba(255,255,255,0.4)",
+              fontFamily: "'Inter', sans-serif",
+              textDecoration: "none",
+            }}
+          >
+            Olvidé mi contraseña
+          </Link>
 
           <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", textAlign: "center", fontFamily: "'Inter', sans-serif" }}>
             Acceso exclusivo equipo @amplifica.io

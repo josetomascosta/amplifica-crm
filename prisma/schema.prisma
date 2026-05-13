@@ -174,6 +174,14 @@ model Reunion {
   updatedAt DateTime @updatedAt
 }
 
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+}
+
 model CompromisoSemanal {
   id                  String  @id @default(cuid())
   semana              String  // "2026-W20"

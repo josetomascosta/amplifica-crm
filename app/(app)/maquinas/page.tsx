@@ -148,7 +148,8 @@ function FiltroFecha({ filtro, onChange }: { filtro: FiltroState; onChange: (f: 
 function TabSeguimiento({ deals, metas, reuniones, filtro }: {
   deals: Deal[]; metas: MetaMensual[]; reuniones: Reunion[]; filtro: FiltroState;
 }) {
-  const periodo = filtro.tipo === "mes" ? filtro.mes : filtro.mes;
+  const [subTab, setSubTab] = useState<"equipo" | "jt" | "manuel" | "ruben">("equipo");
+  const periodo = filtro.mes;
 
   function getMeta(tipo: string, assignee: string, mes: string) {
     return metas.find((m) => m.mes === mes && m.tipo === tipo && m.assignee === assignee)?.objetivo ?? null;
@@ -167,22 +168,31 @@ function TabSeguimiento({ deals, metas, reuniones, filtro }: {
     }).length;
   }
 
-  // Meses to show — past + current (up to selected)
   const mesesVisible = ALL_MESES_2026.filter((m) => m <= periodo);
+
+  const SUB_TABS = [
+    { id: "equipo" as const, label: "Equipo" },
+    { id: "jt" as const, label: "José Tomás", bd: "José Tomás Costa" },
+    { id: "manuel" as const, label: "Manuel", bd: "Manuel del Río" },
+    { id: "ruben" as const, label: "Rubén", bd: "Rubén Quintero" },
+  ];
+
+  const bdForSubTab = SUB_TABS.find((t) => t.id === subTab)?.bd;
 
   return (
     <div>
-      {/* Resumen del mes seleccionado */}
+      {/* Resumen del mes — top cards */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:20 }}>
         {BDS.map((bd) => {
           const ar = getActualReuniones(bd, periodo);
           const mr = getMeta("reuniones", bd, periodo) ?? 0;
           const ac = getActualCierres(bd, periodo);
           const mc = getMeta("cierres", bd, periodo) ?? 0;
+          const isActive = SUB_TABS.find((t) => t.bd === bd)?.id === subTab;
           return (
-            <div key={bd} style={{ backgroundColor:"#fff", border:"1px solid #E1E0E0", borderRadius:12, padding:"16px 20px" }}>
+            <button key={bd} onClick={() => setSubTab(SUB_TABS.find((t) => t.bd === bd)!.id)} style={{ backgroundColor:"#fff", border:`2px solid ${isActive ? "#4548FF" : "#E1E0E0"}`, borderRadius:12, padding:"16px 20px", textAlign:"left", cursor:"pointer" }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-                <div style={{ width:32, height:32, borderRadius:"50%", backgroundColor:"#EEF2FF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:"#4548FF" }}>{bd.charAt(0)}</div>
+                <div style={{ width:32, height:32, borderRadius:"50%", backgroundColor: isActive ? "#4548FF" : "#EEF2FF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color: isActive ? "#fff" : "#4548FF" }}>{bd.charAt(0)}</div>
                 <span style={{ fontSize:13, fontWeight:600, color:"#121755" }}>{bd.split(" ")[0]}</span>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
@@ -195,11 +205,11 @@ function TabSeguimiento({ deals, metas, reuniones, filtro }: {
                   <div style={{ fontSize:18, fontWeight:700, color: ac >= mc && mc > 0 ? "#16a34a" : "#dc2626" }}>{ac}<span style={{ fontSize:12, color:"#aaa", fontWeight:400 }}>/{mc}</span></div>
                 </div>
               </div>
-            </div>
+            </button>
           );
         })}
         {/* Equipo total */}
-        <div style={{ backgroundColor:"#121755", border:"1px solid #121755", borderRadius:12, padding:"16px 20px" }}>
+        <button onClick={() => setSubTab("equipo")} style={{ backgroundColor:"#121755", border:`2px solid ${subTab === "equipo" ? "#F7DC4B" : "#121755"}`, borderRadius:12, padding:"16px 20px", textAlign:"left", cursor:"pointer" }}>
           <div style={{ fontSize:12, fontWeight:700, color:"rgba(255,255,255,0.6)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>Total Equipo</div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
             <div style={{ textAlign:"center" }}>
@@ -211,75 +221,334 @@ function TabSeguimiento({ deals, metas, reuniones, filtro }: {
               <div style={{ fontSize:20, fontWeight:700, color:"#F7DC4B" }}>{BDS.reduce((s,b)=>s+getActualCierres(b,periodo),0)}<span style={{ fontSize:11, color:"rgba(255,255,255,0.4)", fontWeight:400 }}>/{BDS.reduce((s,b)=>s+(getMeta("cierres",b,periodo)??0),0)}</span></div>
             </div>
           </div>
-        </div>
+        </button>
       </div>
 
-      {/* Tabla histórica */}
+      {/* Sub-tabs */}
+      <div style={{ display:"flex", gap:2, marginBottom:16, borderBottom:"1.5px solid #E1E0E0" }}>
+        {SUB_TABS.map((t) => (
+          <button key={t.id} onClick={() => setSubTab(t.id)} style={{ padding:"7px 16px", borderRadius:"7px 7px 0 0", border:"none", backgroundColor: subTab===t.id ? "#EEF2FF" : "transparent", color: subTab===t.id ? "#4548FF" : "#666", fontWeight: subTab===t.id ? 700 : 500, fontSize:13, cursor:"pointer", fontFamily:"'Inter', sans-serif", borderBottom: subTab===t.id ? "2px solid #4548FF" : "2px solid transparent", marginBottom:-1 }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Equipo: tabla histórica */}
+      {subTab === "equipo" && (
+        <div>
+          <div style={{ backgroundColor:"#fff", border:"1px solid #E1E0E0", borderRadius:12, overflow:"auto" }}>
+            <div style={{ padding:"12px 20px", borderBottom:"1px solid #F0F2F7", backgroundColor:"#FAFAFA" }}>
+              <span style={{ fontFamily:"'Barlow Condensed', sans-serif", fontSize:15, fontWeight:700, color:"#121755", textTransform:"uppercase", letterSpacing:"0.04em" }}>
+                Histórico — Enero a {mesLabel(periodo)}
+              </span>
+            </div>
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+                <thead>
+                  <tr style={{ backgroundColor:"#F0F2F7" }}>
+                    <th style={{ padding:"10px 20px", textAlign:"left", fontWeight:700, color:"#121755", fontSize:12, whiteSpace:"nowrap", position:"sticky", left:0, backgroundColor:"#F0F2F7", zIndex:2 }}>BD</th>
+                    {mesesVisible.map((m) => (
+                      <th key={m} colSpan={2} style={{ padding:"10px 14px", textAlign:"center", fontWeight:600, color: m === periodo ? "#4548FF" : "#555", fontSize:11, textTransform:"uppercase", borderLeft:"2px solid #E1E0E0", backgroundColor: m === periodo ? "#EEF2FF" : undefined }}>
+                        {mesLabel(m)}
+                      </th>
+                    ))}
+                  </tr>
+                  <tr style={{ backgroundColor:"#F8F9FF" }}>
+                    <th style={{ padding:"6px 20px", textAlign:"left", color:"#888", fontSize:10, position:"sticky", left:0, backgroundColor:"#F8F9FF", zIndex:2 }}>Métrica</th>
+                    {mesesVisible.map((m) => (
+                      <>
+                        <th key={`${m}-r`} style={{ padding:"6px 10px", textAlign:"center", color:"#888", fontSize:10, borderLeft:"2px solid #E1E0E0" }}>Reu.</th>
+                        <th key={`${m}-c`} style={{ padding:"6px 10px", textAlign:"center", color:"#888", fontSize:10 }}>Cierr.</th>
+                      </>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {BDS.map((bd, i) => (
+                    <tr key={bd} style={{ borderTop:"1px solid #F0F2F7", backgroundColor: i%2===0 ? "#fff" : "#FAFBFF" }}>
+                      <td style={{ padding:"12px 20px", fontWeight:600, color:"#333", whiteSpace:"nowrap", position:"sticky", left:0, backgroundColor: i%2===0 ? "#fff" : "#FAFBFF", zIndex:1 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                          <div style={{ width:26, height:26, borderRadius:"50%", backgroundColor:"#EEF2FF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#4548FF" }}>{bd.charAt(0)}</div>
+                          {bd.split(" ").slice(0,2).join(" ")}
+                        </div>
+                      </td>
+                      {mesesVisible.map((m) => {
+                        const ar = getActualReuniones(bd, m);
+                        const mr = getMeta("reuniones", bd, m);
+                        const ac = getActualCierres(bd, m);
+                        const mc = getMeta("cierres", bd, m);
+                        const isCurrent = m === periodo;
+                        const bg = isCurrent ? "rgba(69,72,255,0.04)" : undefined;
+                        const rColor = mr != null && ar >= mr ? "#16a34a" : "#dc2626";
+                        const cColor = mc != null && ac >= mc && mc > 0 ? "#16a34a" : "#dc2626";
+                        return (
+                          <>
+                            <td key={`${m}-r`} style={{ padding:"12px 10px", textAlign:"center", borderLeft:"2px solid #E1E0E0", backgroundColor:bg }}>
+                              <Badge actual={ar} obj={mr} color={rColor} />
+                            </td>
+                            <td key={`${m}-c`} style={{ padding:"12px 10px", textAlign:"center", backgroundColor:bg }}>
+                              <Badge actual={ac} obj={mc} color={cColor} />
+                            </td>
+                          </>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p style={{ fontSize:12, color:"#aaa", marginTop:10 }}>
+            Reuniones = registros marcados como realizados. Cierres = deals en &ldquo;Cierre Ganado&rdquo; cerrados en el período.
+          </p>
+        </div>
+      )}
+
+      {/* BD individual sub-tab */}
+      {bdForSubTab && (
+        <BDDetalle
+          bd={bdForSubTab}
+          deals={deals}
+          metas={metas}
+          reuniones={reuniones}
+          filtro={filtro}
+          getMeta={getMeta}
+          getActualReuniones={getActualReuniones}
+          getActualCierres={getActualCierres}
+          mesesVisible={mesesVisible}
+        />
+      )}
+    </div>
+  );
+}
+
+function BDDetalle({ bd, deals, metas, reuniones, filtro, getMeta, getActualReuniones, getActualCierres, mesesVisible }: {
+  bd: string;
+  deals: Deal[];
+  metas: MetaMensual[];
+  reuniones: Reunion[];
+  filtro: FiltroState;
+  getMeta: (tipo: string, assignee: string, mes: string) => number | null;
+  getActualReuniones: (bd: string, mes: string) => number;
+  getActualCierres: (bd: string, mes: string) => number;
+  mesesVisible: string[];
+}) {
+  const periodo = filtro.mes;
+  const semanas = semanasDelMes(periodo);
+  const semanaActual = getSemanaActual();
+
+  const ar = getActualReuniones(bd, periodo);
+  const mr = getMeta("reuniones", bd, periodo) ?? 0;
+  const ac = getActualCierres(bd, periodo);
+  const mc = getMeta("cierres", bd, periodo) ?? 0;
+  const mp = getMeta("pedidos", bd, periodo) ?? 0;
+
+  const dealsActivos = deals.filter((d) => d.businessDeveloper === bd && !d.etapa.toLowerCase().includes("cierre ganado"));
+  const dealsCerrados = deals.filter((d) => d.businessDeveloper === bd && d.etapa.toLowerCase().includes("cierre ganado"));
+  const ingresoMensual = dealsCerrados.reduce((s, d) => s + (d.pedidosMensuales ?? 0) * (d.tarifaPorPedido ?? 0), 0);
+
+  function getReunionesSemana(sem: string): Reunion[] {
+    return reuniones.filter((r) => r.bdNombre === bd && getISOSemana(new Date(r.fecha)) === sem);
+  }
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+      {/* KPI cards del mes */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12 }}>
+        <KpiCard label="Reuniones realizadas" actual={ar} meta={mr} tipo="count" />
+        <KpiCard label="Cierres del mes" actual={ac} meta={mc} tipo="count" />
+        <KpiCard label="Pedidos/mes objetivo" actual={mp} meta={mp} tipo="pedidos" />
+        <KpiCard label="Ingreso mensual est." actual={ingresoMensual} meta={null} tipo="clp" />
+      </div>
+
+      {/* Reuniones semana a semana del mes seleccionado */}
+      <div style={{ backgroundColor:"#fff", border:"1px solid #E1E0E0", borderRadius:12, overflow:"hidden" }}>
+        <div style={{ padding:"12px 20px", borderBottom:"1px solid #F0F2F7", backgroundColor:"#FAFAFA" }}>
+          <span style={{ fontFamily:"'Barlow Condensed', sans-serif", fontSize:15, fontWeight:700, color:"#121755", textTransform:"uppercase" }}>
+            Reuniones por semana — {mesLabel(periodo)}
+          </span>
+        </div>
+        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+          <thead>
+            <tr style={{ backgroundColor:"#F0F2F7" }}>
+              <th style={{ padding:"10px 20px", textAlign:"left", fontWeight:700, color:"#121755", fontSize:12 }}>Semana</th>
+              <th style={{ padding:"10px 14px", textAlign:"center", fontWeight:600, color:"#555", fontSize:11, textTransform:"uppercase" }}>Realizadas</th>
+              <th style={{ padding:"10px 14px", textAlign:"center", fontWeight:600, color:"#555", fontSize:11, textTransform:"uppercase" }}>Agendadas</th>
+              <th style={{ padding:"10px 14px", textAlign:"left", fontWeight:600, color:"#555", fontSize:11, textTransform:"uppercase" }}>Marcas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {semanas.map((sem, idx) => {
+              const reus = getReunionesSemana(sem);
+              const realizadas = reus.filter((r) => r.realizada).length;
+              const isCurrent = sem === semanaActual;
+              return (
+                <tr key={sem} style={{ borderTop:"1px solid #F0F2F7", backgroundColor: isCurrent ? "#EEF2FF" : idx%2===0 ? "#fff" : "#FAFBFF" }}>
+                  <td style={{ padding:"12px 20px" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      {isCurrent && <span style={{ fontSize:10, fontWeight:700, color:"#4548FF", backgroundColor:"#EEF2FF", padding:"2px 6px", borderRadius:20 }}>ACTUAL</span>}
+                      <span style={{ fontWeight: isCurrent ? 700 : 400, fontSize:12, color:"#333" }}>{semanaLabel(sem)}</span>
+                    </div>
+                  </td>
+                  <td style={{ padding:"12px 14px", textAlign:"center" }}>
+                    <span style={{ fontWeight:700, fontSize:15, color: realizadas > 0 ? "#16a34a" : "#aaa" }}>{realizadas}</span>
+                  </td>
+                  <td style={{ padding:"12px 14px", textAlign:"center" }}>
+                    <span style={{ fontWeight:600, fontSize:14, color:"#4548FF" }}>{reus.length}</span>
+                  </td>
+                  <td style={{ padding:"12px 14px" }}>
+                    <span style={{ fontSize:12, color:"#555" }}>
+                      {reus.filter((r) => r.dealNombre).map((r) => r.dealNombre).join(", ") || <span style={{ color:"#ccc" }}>—</span>}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Histórico anual */}
       <div style={{ backgroundColor:"#fff", border:"1px solid #E1E0E0", borderRadius:12, overflow:"auto" }}>
         <div style={{ padding:"12px 20px", borderBottom:"1px solid #F0F2F7", backgroundColor:"#FAFAFA" }}>
-          <span style={{ fontFamily:"'Barlow Condensed', sans-serif", fontSize:15, fontWeight:700, color:"#121755", textTransform:"uppercase", letterSpacing:"0.04em" }}>
-            Histórico Reuniones — Enero a {mesLabel(periodo)}
+          <span style={{ fontFamily:"'Barlow Condensed', sans-serif", fontSize:15, fontWeight:700, color:"#121755", textTransform:"uppercase" }}>
+            Histórico Anual — {bd.split(" ")[0]}
           </span>
         </div>
         <div style={{ overflowX:"auto" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
             <thead>
               <tr style={{ backgroundColor:"#F0F2F7" }}>
-                <th style={{ padding:"10px 20px", textAlign:"left", fontWeight:700, color:"#121755", fontSize:12, whiteSpace:"nowrap", position:"sticky", left:0, backgroundColor:"#F0F2F7", zIndex:2 }}>BD</th>
-                {mesesVisible.map((m) => (
-                  <th key={m} colSpan={2} style={{ padding:"10px 14px", textAlign:"center", fontWeight:600, color: m === periodo ? "#4548FF" : "#555", fontSize:11, textTransform:"uppercase", borderLeft:"2px solid #E1E0E0", backgroundColor: m === periodo ? "#EEF2FF" : undefined }}>
-                    {mesLabel(m)}
-                  </th>
-                ))}
-              </tr>
-              <tr style={{ backgroundColor:"#F8F9FF" }}>
-                <th style={{ padding:"6px 20px", textAlign:"left", color:"#888", fontSize:10, position:"sticky", left:0, backgroundColor:"#F8F9FF", zIndex:2 }}>Métrica</th>
-                {mesesVisible.map((m) => (
-                  <>
-                    <th key={`${m}-r`} style={{ padding:"6px 10px", textAlign:"center", color:"#888", fontSize:10, borderLeft:"2px solid #E1E0E0" }}>Reu.</th>
-                    <th key={`${m}-c`} style={{ padding:"6px 10px", textAlign:"center", color:"#888", fontSize:10 }}>Cierr.</th>
-                  </>
-                ))}
+                <th style={{ padding:"10px 14px", textAlign:"left", fontWeight:700, color:"#121755", fontSize:11, position:"sticky", left:0, backgroundColor:"#F0F2F7", zIndex:2 }}>Mes</th>
+                <th style={{ padding:"10px 14px", textAlign:"center", fontWeight:600, color:"#555", fontSize:10, textTransform:"uppercase" }}>Obj. Reu.</th>
+                <th style={{ padding:"10px 14px", textAlign:"center", fontWeight:600, color:"#555", fontSize:10, textTransform:"uppercase" }}>Real. Reu.</th>
+                <th style={{ padding:"10px 14px", textAlign:"center", fontWeight:600, color:"#555", fontSize:10, textTransform:"uppercase" }}>% Reu.</th>
+                <th style={{ padding:"10px 14px", textAlign:"center", fontWeight:600, color:"#555", fontSize:10, textTransform:"uppercase" }}>Obj. Cierres</th>
+                <th style={{ padding:"10px 14px", textAlign:"center", fontWeight:600, color:"#555", fontSize:10, textTransform:"uppercase" }}>Real. Cierres</th>
+                <th style={{ padding:"10px 14px", textAlign:"center", fontWeight:600, color:"#555", fontSize:10, textTransform:"uppercase" }}>Obj. Pedidos</th>
               </tr>
             </thead>
             <tbody>
-              {BDS.map((bd, i) => (
-                <tr key={bd} style={{ borderTop:"1px solid #F0F2F7", backgroundColor: i%2===0 ? "#fff" : "#FAFBFF" }}>
-                  <td style={{ padding:"12px 20px", fontWeight:600, color:"#333", whiteSpace:"nowrap", position:"sticky", left:0, backgroundColor: i%2===0 ? "#fff" : "#FAFBFF", zIndex:1 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <div style={{ width:26, height:26, borderRadius:"50%", backgroundColor:"#EEF2FF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#4548FF" }}>{bd.charAt(0)}</div>
-                      {bd.split(" ").slice(0,2).join(" ")}
-                    </div>
-                  </td>
-                  {mesesVisible.map((m) => {
-                    const ar = getActualReuniones(bd, m);
-                    const mr = getMeta("reuniones", bd, m);
-                    const ac = getActualCierres(bd, m);
-                    const mc = getMeta("cierres", bd, m);
-                    const isCurrent = m === periodo;
-                    const bg = isCurrent ? "rgba(69,72,255,0.04)" : undefined;
-                    const rColor = mr != null && ar >= mr ? "#16a34a" : "#dc2626";
-                    const cColor = mc != null && ac >= mc && mc > 0 ? "#16a34a" : "#dc2626";
-                    return (
-                      <>
-                        <td key={`${m}-r`} style={{ padding:"12px 10px", textAlign:"center", borderLeft:"2px solid #E1E0E0", backgroundColor:bg }}>
-                          <Badge actual={ar} obj={mr} color={rColor} />
-                        </td>
-                        <td key={`${m}-c`} style={{ padding:"12px 10px", textAlign:"center", backgroundColor:bg }}>
-                          <Badge actual={ac} obj={mc} color={cColor} />
-                        </td>
-                      </>
-                    );
-                  })}
-                </tr>
-              ))}
+              {mesesVisible.map((m, idx) => {
+                const objR = getMeta("reuniones", bd, m) ?? 0;
+                const actR = getActualReuniones(bd, m);
+                const objC = getMeta("cierres", bd, m) ?? 0;
+                const actC = getActualCierres(bd, m);
+                const objP = getMeta("pedidos", bd, m) ?? 0;
+                const pctR = objR > 0 ? Math.round(actR / objR * 100) : 0;
+                const isCurrent = m === periodo;
+                return (
+                  <tr key={m} style={{ borderTop:"1px solid #F0F2F7", backgroundColor: isCurrent ? "rgba(69,72,255,0.06)" : idx%2===0 ? "#fff" : "#FAFBFF" }}>
+                    <td style={{ padding:"10px 14px", fontWeight: isCurrent ? 700 : 500, color: isCurrent ? "#4548FF" : "#333", position:"sticky", left:0, backgroundColor: isCurrent ? "rgba(69,72,255,0.06)" : idx%2===0 ? "#fff" : "#FAFBFF", zIndex:1 }}>
+                      {mesLabel(m)}
+                    </td>
+                    <td style={{ padding:"10px 14px", textAlign:"center", color:"#888" }}>{objR}</td>
+                    <td style={{ padding:"10px 14px", textAlign:"center", fontWeight:700, color: actR >= objR ? "#16a34a" : "#dc2626" }}>{actR}</td>
+                    <td style={{ padding:"10px 14px", textAlign:"center" }}>
+                      <span style={{ fontWeight:600, fontSize:11, color: pctR >= 100 ? "#16a34a" : pctR >= 70 ? "#d97706" : "#dc2626", backgroundColor: pctR >= 100 ? "#F0FFF4" : pctR >= 70 ? "#FFFBEB" : "#FFF1F2", padding:"2px 7px", borderRadius:20 }}>
+                        {pctR}%
+                      </span>
+                    </td>
+                    <td style={{ padding:"10px 14px", textAlign:"center", color:"#888" }}>{objC}</td>
+                    <td style={{ padding:"10px 14px", textAlign:"center", fontWeight:700, color: actC >= objC ? "#16a34a" : "#dc2626" }}>{actC}</td>
+                    <td style={{ padding:"10px 14px", textAlign:"center", color:"#888" }}>{objP > 0 ? fmtNum(objP) : "—"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
-      <p style={{ fontSize:12, color:"#aaa", marginTop:10 }}>
-        Actual reuniones = registros en la pestaña Reuniones marcados como realizados. Cierres = deals en &ldquo;Cierre Ganado&rdquo; cerrados en el período.
-      </p>
+
+      {/* Deals activos */}
+      {dealsActivos.length > 0 && (
+        <div style={{ backgroundColor:"#fff", border:"1px solid #E1E0E0", borderRadius:12, overflow:"hidden" }}>
+          <div style={{ padding:"12px 20px", borderBottom:"1px solid #F0F2F7", backgroundColor:"#FAFAFA" }}>
+            <span style={{ fontFamily:"'Barlow Condensed', sans-serif", fontSize:14, fontWeight:700, color:"#121755", textTransform:"uppercase" }}>
+              Marcas en Pipeline — {dealsActivos.length}
+            </span>
+          </div>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+            <thead>
+              <tr style={{ backgroundColor:"#F0F2F7" }}>
+                {["Marca","Etapa","Plan","Pedidos/mes","Ingreso est."].map((h) => (
+                  <th key={h} style={{ padding:"8px 14px", textAlign:h==="Marca"?"left":"right", fontWeight:600, color:"#555", fontSize:11, textTransform:"uppercase" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {dealsActivos.map((d, i) => {
+                const ing = (d.pedidosMensuales ?? 0) * (d.tarifaPorPedido ?? 0);
+                return (
+                  <tr key={d.id} style={{ borderTop:"1px solid #F0F2F7", backgroundColor: i%2===0 ? "#fff" : "#FAFBFF" }}>
+                    <td style={{ padding:"10px 14px", fontWeight:600, color:"#121755" }}>{d.nombre}</td>
+                    <td style={{ padding:"10px 14px", textAlign:"right" }}>
+                      <span style={{ fontSize:11, padding:"2px 8px", borderRadius:20, backgroundColor:"#EEF2FF", color:"#4548FF", fontWeight:600 }}>{d.etapa}</span>
+                    </td>
+                    <td style={{ padding:"10px 14px", textAlign:"right", color:"#555" }}>{d.tipoPlan ?? "—"}</td>
+                    <td style={{ padding:"10px 14px", textAlign:"right" }}>{fmtNum(d.pedidosMensuales)}</td>
+                    <td style={{ padding:"10px 14px", textAlign:"right", color:"#888" }}>{ing > 0 ? fmtCLP(ing) : "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Deals cerrados */}
+      {dealsCerrados.length > 0 && (
+        <div style={{ backgroundColor:"#fff", border:"1px solid #E1E0E0", borderRadius:12, overflow:"hidden" }}>
+          <div style={{ padding:"12px 20px", borderBottom:"1px solid #F0F2F7", backgroundColor:"#F0FFF4" }}>
+            <span style={{ fontFamily:"'Barlow Condensed', sans-serif", fontSize:14, fontWeight:700, color:"#166534", textTransform:"uppercase" }}>
+              Cierres Activos — {dealsCerrados.length} marcas · {fmtCLP(ingresoMensual)}/mes est.
+            </span>
+          </div>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+            <thead>
+              <tr style={{ backgroundColor:"#F0F2F7" }}>
+                {["Marca","Plan","Pedidos/mes","Tarifa/pedido","Ingreso mensual","Sucursales","Onboarding"].map((h) => (
+                  <th key={h} style={{ padding:"8px 14px", textAlign:h==="Marca"?"left":"right", fontWeight:600, color:"#555", fontSize:11, textTransform:"uppercase" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {dealsCerrados.map((d, i) => {
+                const ing = (d.pedidosMensuales ?? 0) * (d.tarifaPorPedido ?? 0);
+                return (
+                  <tr key={d.id} style={{ borderTop:"1px solid #F0F2F7", backgroundColor: i%2===0 ? "#fff" : "#F7FFF9" }}>
+                    <td style={{ padding:"10px 14px", fontWeight:600, color:"#166534" }}>{d.nombre}</td>
+                    <td style={{ padding:"10px 14px", textAlign:"right" }}>{d.tipoPlan ? <span style={{ fontSize:11, padding:"2px 8px", borderRadius:20, backgroundColor:"#EEF2FF", color:"#4548FF", fontWeight:600 }}>{d.tipoPlan}</span> : "—"}</td>
+                    <td style={{ padding:"10px 14px", textAlign:"right", fontWeight:600 }}>{fmtNum(d.pedidosMensuales)}</td>
+                    <td style={{ padding:"10px 14px", textAlign:"right" }}>{fmtCLP(d.tarifaPorPedido)}</td>
+                    <td style={{ padding:"10px 14px", textAlign:"right", fontWeight:700, color:"#16a34a" }}>{ing > 0 ? fmtCLP(ing) : "—"}</td>
+                    <td style={{ padding:"10px 14px", textAlign:"right" }}>{d.sucursales ?? "—"}</td>
+                    <td style={{ padding:"10px 14px", textAlign:"right", color:"#888", fontSize:12 }}>
+                      {d.fechaOnboarding ? new Date(d.fechaOnboarding).toLocaleDateString("es-CL", { day:"numeric", month:"short" }) : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KpiCard({ label, actual, meta, tipo }: { label: string; actual: number; meta: number | null; tipo: "count" | "pedidos" | "clp" }) {
+  const isOk = meta !== null ? actual >= meta : actual > 0;
+  const pct = meta !== null && meta > 0 ? Math.min(100, Math.round(actual / meta * 100)) : null;
+  const displayVal = tipo === "clp" ? fmtCLP(actual || null) : tipo === "pedidos" ? (actual > 0 ? fmtNum(actual) : "—") : String(actual);
+  const displayMeta = meta !== null ? (tipo === "clp" ? fmtCLP(meta) : tipo === "pedidos" ? fmtNum(meta) : String(meta)) : null;
+  return (
+    <div style={{ backgroundColor:"#fff", border:"1px solid #E1E0E0", borderRadius:12, padding:"16px 20px" }}>
+      <div style={{ fontSize:11, color:"#888", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>{label}</div>
+      <div style={{ fontSize:26, fontWeight:700, fontFamily:"'Barlow Condensed', sans-serif", color: tipo === "clp" ? "#121755" : isOk && meta !== null ? "#16a34a" : meta !== null ? "#dc2626" : "#121755" }}>
+        {displayVal}
+      </div>
+      {displayMeta && tipo !== "clp" && <div style={{ fontSize:12, color:"#aaa", marginTop:2 }}>Meta: {displayMeta}{pct !== null && ` · ${pct}%`}</div>}
     </div>
   );
 }

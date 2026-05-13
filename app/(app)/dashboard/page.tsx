@@ -23,9 +23,12 @@ function scoreColor(pct: number) {
 
 export default async function DashboardPage() {
   const session = await auth();
-  const userId = session!.user!.id!;
-  const role = (session!.user as { role?: string }).role ?? "SALES";
-  const userName = session!.user!.name ?? "";
+  if (!session?.user) return null;
+
+  const sessionUser = session.user as { id?: string; role?: string; name?: string; email?: string };
+  const userId = sessionUser.id ?? "";
+  const role = sessionUser.role ?? "SALES";
+  const userName = sessionUser.name ?? session.user.email?.split("@")[0] ?? "";
   const isGlobal = role === "JEFATURA" || role === "ADMIN";
 
   const mes = getMesActual();
@@ -48,9 +51,10 @@ export default async function DashboardPage() {
       orderBy: { createdAt: "desc" },
     }),
     prisma.metaMensual.findMany({ where: { mes } }),
-    prisma.reunion.findMany({
-      where: { fecha: { gte: mesStart, lt: mesEnd } },
-    }),
+    // Tabla Reunion puede no existir aún en la BD — fallback a []
+    prisma.reunion
+      .findMany({ where: { fecha: { gte: mesStart, lt: mesEnd } } })
+      .catch(() => [] as { id: string; fecha: Date; bdNombre: string; dealNombre: string | null; realizada: boolean }[]),
   ]);
 
   // Scope: jefatura/admin sees all, others see only their data
